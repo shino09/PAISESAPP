@@ -1,0 +1,57 @@
+## Configuration de Visual Studio y Soluciones (.sln)
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## Carpetas de Compilación y Salida de Binarios
+[Bb]in/
+[Oo]bj/
+[Ex]E/
+[Dd]ll/
+
+## Archivos generados por Visual Studio (Caché y Perfilado)
+.vs/
+*.vshost.exe
+*.vshost.exe.manifest
+*.manifest
+*.resX
+
+## Datos de diagnóstico y herramientas de profiling
+*.dtbcache
+*.suo
+*.vshost.*
+*.ilk
+*.meta
+*.obj
+*.pch
+*.pdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlog
+*.tlb
+*.idb
+
+## Paquetes de dependencias (NuGet)
+packages/
+!packages/repositories.config
+*.nuget.props
+*.nuget.targets
+
+## Carpetas de publicación y despliegue (Publish)
+*.Publish.xml
+*.pubxml
+*.pubxml.user
+
+## Archivos de Test y Cobertura de Código
+TestResults/
+*.visualstudio.testresults
+*.testsettings
+
+## Archivos temporales del sistema u otros IDEs
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store

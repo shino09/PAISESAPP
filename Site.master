@@ -1,0 +1,52 @@
+<%@ Master Language="VB" AutoEventWireup="false" CodeFile="Site.master.vb" Inherits="SiteMaster" %>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title><asp:Literal ID="litTitle" runat="server" Text="PaisesAPP" /></title>
+    <link href="Content/site.css" rel="stylesheet" />
+</head>
+<body>
+    <form id="form1" runat="server">
+        <nav class="navbar">
+            <div class="nav-inner">
+                <a href="Default.aspx" class="nav-brand">PaisesAPP</a>
+                <button type="button" class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')">☰</button>
+                <ul class="nav-links">
+                    <li><a href="Default.aspx">Inicio</a></li>
+                    <li><a href="Continentes.aspx">Continentes</a></li>
+                    <li><a href="Monedas.aspx">Monedas</a></li>
+                    <li><a href="Paises.aspx">Paises</a></li>
+                    <li><a href="Ciudades.aspx">Ciudades</a></li>
+                    <li><a href="Idiomas.aspx">Idiomas</a></li>
+                    <li><a href="PaisesIdiomas.aspx">Paises-Idiomas</a></li>
+                    <li><a href="Gobiernos.aspx">Gobiernos</a></li>
+                    <li><a href="PaisesGobiernos.aspx">Paises-Gobiernos</a></li>
+                    <li><a href="Economias.aspx">Economias</a></li>
+                    <li><a href="HistoriaPais.aspx">Historia</a></li>
+                    <li class="nav-sep"><span>|</span></li>
+                    <li><a href="#" onclick="window.open('','_self',''); window.close(); return false;" class="nav-exit">Salir</a></li>
+                </ul>
+            </div>
+        </nav>
+        <main class="main-content">
+            <asp:ContentPlaceHolder ID="MainContent" runat="server" />
+            <div class="footer-info">
+                Desarrollador en Visual Basic y Oracle por Ivan Sobarzo - 2026<br />
+                Version: <asp:Label ID="lblVersion" runat="server" CssClass="version-stamp" />
+            </div>
+        </main>
+    </form>
+    <script>
+        (function() {
+            var fails = 0;
+            function ping() {
+                fetch(location.href, { method: 'HEAD', cache: 'no-store' })
+                    .then(function(){ fails = 0; })
+                    .catch(function(){ fails++; if(fails>=2) window.close(); });
+            }
+            setInterval(ping, 3000);
+        })();
+    </script>
+</body>
+</html>
