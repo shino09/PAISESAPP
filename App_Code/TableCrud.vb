@@ -13,19 +13,30 @@ Public Class TableCrud
                                  Optional sortCol As String = "",
                                  Optional sortDir As String = "")
 
+        Dim hasEstado As Boolean = columnInfo.Any(Function(c) c.ColumnName.ToUpper() = "ESTADO")
+
         Dim sql As New StringBuilder()
         sql.Append("SELECT * FROM " & tableName)
+
+        If hasEstado Then
+            sql.Append(" WHERE (estado IS NULL OR estado = 'V')")
+        End If
 
         If Not String.IsNullOrEmpty(search) Then
             Dim textCols = columnInfo.Where(Function(c) c.DataType.ToUpper().Contains("CHAR") OrElse _
                                                c.DataType.ToUpper().Contains("VARCHAR") OrElse _
                                                c.DataType.ToUpper().Contains("CLOB")).ToList()
             If textCols.Count > 0 Then
-                sql.Append(" WHERE ")
+                If hasEstado Then
+                    sql.Append(" AND (")
+                Else
+                    sql.Append(" WHERE ")
+                End If
                 For i As Integer = 0 To textCols.Count - 1
                     If i > 0 Then sql.Append(" OR ")
                     sql.AppendFormat("UPPER({0}) LIKE :p_search", textCols(i).ColumnName)
                 Next
+                If hasEstado Then sql.Append(")")
             End If
         End If
 
@@ -60,7 +71,7 @@ Public Class TableCrud
             bf.SortExpression = col.ColumnName
 
             If ci IsNot Nothing Then
-                Dim editable As Boolean = Not (pkColumns.Contains(ci.ColumnName) OrElse ci.IsIdentity OrElse ci.IsVirtual)
+                Dim editable As Boolean = Not (pkColumns.Contains(ci.ColumnName) OrElse ci.IsIdentity OrElse ci.IsVirtual OrElse ci.ColumnName.ToUpper() = "ESTADO")
                 bf.ReadOnly = Not editable
 
                 If ci.DataType.ToUpper().Contains("DATE") Then
@@ -166,22 +177,32 @@ Public Class TableCrud
         End Try
     End Function
 
-    ' Ejecuta DELETE recibiendo las PK del GridView
+    ' Ejecuta soft DELETE (UPDATE estado='A') o hard delete si no existe columna estado
     Public Shared Function Eliminar(e As GridViewDeleteEventArgs,
                                     tableName As String,
-                                    pkColumns As List(Of String)) As String
+                                    pkColumns As List(Of String),
+                                    columnInfo As List(Of ColumnInfo)) As String
+        Dim sql As String = ""
         Try
             Dim p As New Dictionary(Of String, Object)()
             Dim wc As New List(Of String)()
             For Each pk In pkColumns
+                If Not e.Keys.Contains(pk) Then Return "La clave " & pk & " no esta en e.Keys. DataKeyNames=" & String.Join(",", TryCast(e.Keys, System.Collections.ICollection).OfType(Of String)())
                 wc.Add(String.Format("{0} = :pk_{0}", pk))
                 p.Add("pk_" & pk, e.Keys(pk))
             Next
-            Dim sql As String = String.Format("DELETE FROM {0} WHERE {1}", tableName, String.Join(" AND ", wc))
-            DatabaseHelper.ExecuteNonQuery(sql, p)
+            Dim whereClause As String = String.Join(" AND ", wc)
+            Dim hasEstado As Boolean = columnInfo.Any(Function(c) c.ColumnName.ToUpper() = "ESTADO")
+            If hasEstado Then
+                sql = String.Format("UPDATE {0} SET estado = 'A' WHERE {1}", tableName, whereClause)
+            Else
+                sql = String.Format("DELETE FROM {0} WHERE {1}", tableName, whereClause)
+            End If
+            Dim rows As Integer = DatabaseHelper.ExecuteNonQuery(sql, p)
+            If rows = 0 Then Return "No se afectaron filas. SQL: " & sql
             Return ""
         Catch ex As Exception
-            Return ex.Message
+            Return ex.Message & " | SQL: " & sql
         End Try
     End Function
 
@@ -189,13 +210,14 @@ Public Class TableCrud
     Public Shared Function Insertar(ph As System.Web.UI.WebControls.PlaceHolder,
                                     tableName As String,
                                     columnInfo As List(Of ColumnInfo)) As String
+        Dim sql As String = ""
         Try
             Dim cols As New List(Of String)()
             Dim p As New Dictionary(Of String, Object)()
             Dim vals As New List(Of String)()
 
             For Each ci In columnInfo
-                If ci.IsIdentity OrElse ci.IsVirtual Then Continue For
+                If ci.IsIdentity OrElse ci.IsVirtual OrElse ci.ColumnName.ToUpper() = "ESTADO" Then Continue For
 
                 Dim ctrl As System.Web.UI.Control = FindControlInPage(ph, "add_" & ci.ColumnName)
                 If ctrl Is Nothing Then Continue For
@@ -210,6 +232,9 @@ Public Class TableCrud
                 cols.Add(ci.ColumnName)
 
                 If String.IsNullOrEmpty(rawValue) Then
+                    If Not ci.IsNullable Then
+                        Return "El campo " & ci.ColumnName & " es obligatorio."
+                    End If
                     vals.Add("NULL")
                     Continue For
                 End If
@@ -237,14 +262,14 @@ Public Class TableCrud
 
             If cols.Count = 0 Then Return "No hay columnas para insertar."
 
-            Dim sql As String = String.Format("INSERT INTO {0} ({1}) VALUES ({2})",
-                                               tableName,
-                                               String.Join(", ", cols),
-                                               String.Join(", ", vals))
+            sql = String.Format("INSERT INTO {0} ({1}) VALUES ({2})",
+                                tableName,
+                                String.Join(", ", cols),
+                                String.Join(", ", vals))
             DatabaseHelper.ExecuteNonQuery(sql, p)
             Return ""
         Catch ex As Exception
-            Return ex.Message
+            Return ex.Message & " | SQL: " & sql
         End Try
     End Function
 
@@ -257,7 +282,7 @@ Public Class TableCrud
         container.Attributes.Add("class", "add-form-grid")
 
         For Each ci In columnInfo
-            If ci.IsIdentity OrElse ci.IsVirtual Then Continue For
+            If ci.IsIdentity OrElse ci.IsVirtual OrElse ci.ColumnName.ToUpper() = "ESTADO" Then Continue For
 
             Dim div As New HtmlGenericControl("div")
             div.Attributes.Add("class", "add-field")
@@ -293,7 +318,7 @@ Public Class TableCrud
                     div.Controls.Add(txt)
                 End Try
                 div.Controls.Add(ddl)
-            ElseIf ci.DataType.ToUpper().Contains("CHAR") AndAlso ci.DataLength <= 2 Then
+            ElseIf ci.DataType.ToUpper().Contains("CHAR") AndAlso ci.DataLength = 1 Then
                 Dim ddl As New DropDownList()
                 ddl.ID = "add_" & ci.ColumnName
                 ddl.CssClass = "add-select"
@@ -441,8 +466,23 @@ Public Class TableCrud
             div.Controls.Add(lbl)
 
             Dim rawValue As String = ""
-            If rowData.Table.Columns.Contains(ci.ColumnName) AndAlso rowData(ci.ColumnName) IsNot DBNull.Value Then
+            If rowData IsNot Nothing AndAlso rowData.Table.Columns.Contains(ci.ColumnName) AndAlso rowData(ci.ColumnName) IsNot DBNull.Value Then
                 rawValue = rowData(ci.ColumnName).ToString()
+            End If
+
+            ' ESTADO: dropdown Vigente/Anular
+            If ci.ColumnName.ToUpper() = "ESTADO" Then
+                Dim ddl As New DropDownList()
+                ddl.ID = "edit_" & ci.ColumnName
+                ddl.CssClass = "add-select"
+                ddl.Items.Add(New ListItem("Vigente (V)", "V"))
+                ddl.Items.Add(New ListItem("Anular (A)", "A"))
+                If ddl.Items.FindByValue(rawValue) IsNot Nothing Then
+                    ddl.SelectedValue = rawValue
+                End If
+                div.Controls.Add(ddl)
+                container.Controls.Add(div)
+                Continue For
             End If
 
             Dim fkRows() As DataRow = Nothing
@@ -475,7 +515,7 @@ Public Class TableCrud
                     ddl.SelectedValue = rawValue
                 End If
                 div.Controls.Add(ddl)
-            ElseIf ci.DataType.ToUpper().Contains("CHAR") AndAlso ci.DataLength <= 2 Then
+            ElseIf ci.DataType.ToUpper().Contains("CHAR") AndAlso ci.DataLength = 1 Then
                 Dim ddl As New DropDownList()
                 ddl.ID = "edit_" & ci.ColumnName
                 ddl.CssClass = "add-select"
@@ -538,8 +578,8 @@ Public Class TableCrud
             Dim clauses As New List(Of String)()
             Dim p As New Dictionary(Of String, Object)()
 
-            For Each ci In columnInfo
-                If ci.IsIdentity OrElse ci.IsVirtual Then Continue For
+        For Each ci In columnInfo
+            If ci.IsIdentity OrElse ci.IsVirtual Then Continue For
 
                 Dim ctrl As System.Web.UI.Control = FindControlInPage(phEdit, "edit_" & ci.ColumnName)
                 If ctrl Is Nothing Then Continue For

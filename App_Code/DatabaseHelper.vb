@@ -67,20 +67,13 @@ Public Class DatabaseHelper
         Return result
     End Function
 
-    ' Obtiene metadatos de columnas (intenta con virtual_column, fallback con data_default)
+    ' Obtiene metadatos de columnas con deteccion directa de virtuales via ALL_TAB_COLS
+    ' Nota: USER_TAB_COLUMNS no expone VIRTUAL_COLUMN en Oracle 21c,
+    ' pero ALL_TAB_COLS si lo hace.
     Public Shared Function GetTableColumns(tableName As String) As List(Of ColumnInfo)
-        Try
-            Return GetTableColumnsWithVirtual(tableName)
-        Catch
-            Return GetTableColumnsWithoutVirtual(tableName)
-        End Try
-    End Function
-
-    ' Obtiene columnas usando la columna VIRTUAL_COLUMN (Oracle 12c+)
-    Private Shared Function GetTableColumnsWithVirtual(tableName As String) As List(Of ColumnInfo)
         Dim sql As String = "SELECT column_name, data_type, data_length, nullable, " & _
                             "identity_column, virtual_column " & _
-                            "FROM user_tab_columns WHERE table_name = :p_table " & _
+                            "FROM all_tab_cols WHERE table_name = :p_table " & _
                             "ORDER BY column_id"
         Dim p As New Dictionary(Of String, Object)()
         p.Add("p_table", tableName)
@@ -94,38 +87,6 @@ Public Class DatabaseHelper
             ci.IsNullable = (row("nullable").ToString() = "Y")
             ci.IsIdentity = (row("identity_column").ToString() = "YES")
             ci.IsVirtual = (row("virtual_column").ToString() = "YES")
-            result.Add(ci)
-        Next
-        Return result
-    End Function
-
-    ' Fallback: detecta columnas virtuales mediante DATA_DEFAULT
-    Private Shared Function GetTableColumnsWithoutVirtual(tableName As String) As List(Of ColumnInfo)
-        Dim sql As String = "SELECT column_name, data_type, data_length, nullable, " & _
-                            "identity_column, data_default " & _
-                            "FROM user_tab_columns WHERE table_name = :p_table " & _
-                            "ORDER BY column_id"
-        Dim p As New Dictionary(Of String, Object)()
-        p.Add("p_table", tableName)
-        Dim dt As DataTable = GetDataTable(sql, p)
-        Dim result As New List(Of ColumnInfo)()
-        For Each row As DataRow In dt.Rows
-            Dim ci As New ColumnInfo()
-            ci.ColumnName = row("column_name").ToString()
-            ci.DataType = row("data_type").ToString()
-            ci.DataLength = Convert.ToInt32(row("data_length"))
-            ci.IsNullable = (row("nullable").ToString() = "Y")
-            ci.IsIdentity = (row("identity_column").ToString() = "YES")
-            Dim dataDefault As String = ""
-            If row("data_default") IsNot DBNull.Value Then
-                dataDefault = row("data_default").ToString().ToUpper().Trim()
-            End If
-            ci.IsVirtual = (Not ci.IsIdentity AndAlso _
-                           Not String.IsNullOrEmpty(dataDefault) AndAlso _
-                           (dataDefault.Contains("CASE") OrElse _
-                            dataDefault.Contains("SYS_GUID") OrElse _
-                            dataDefault.Contains("USERENV") OrElse _
-                            dataDefault.Contains("SYSDATE")))
             result.Add(ci)
         Next
         Return result

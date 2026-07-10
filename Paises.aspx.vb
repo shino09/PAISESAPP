@@ -14,7 +14,20 @@ Public Class Paises
     ' Carga metadatos de columnas, PK y FK al iniciar la pagina
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         CargarMetaDatos()
-        If Not IsPostBack Then CargarDatos()
+        If Not IsPostBack Then
+            CargarDatos()
+        Else
+            If pnlAdd.Visible Then
+                TableCrud.ConstruirFormularioAdd(phAdd, columnInfo, fkInfo)
+            End If
+            If pnlEdit.Visible AndAlso ViewState("currentEditPK") IsNot Nothing Then
+                currentEditPK = CType(ViewState("currentEditPK"), Dictionary(Of String, Object))
+                Dim rowData As DataRow = TableCrud.GetRowData(TABLA, pkColumns, currentEditPK)
+                If rowData IsNot Nothing Then
+                    TableCrud.ConstruirFormularioEditar(phEdit, columnInfo, fkInfo, rowData)
+                End If
+            End If
+        End If
     End Sub
 
     ' Obtiene columnas, primary key y foreign keys de la tabla
@@ -22,6 +35,9 @@ Public Class Paises
         columnInfo = DatabaseHelper.GetTableColumns(TABLA)
         pkColumns = DatabaseHelper.GetPrimaryKeyColumns(TABLA)
         fkInfo = DatabaseHelper.GetForeignKeyInfo(TABLA)
+        If pkColumns.Count > 0 Then
+            gv.DataKeyNames = pkColumns.ToArray()
+        End If
     End Sub
 
     ' Llena el GridView con datos y oculta los modales
@@ -82,6 +98,7 @@ Public Class Paises
                 currentEditPK(pk) = gv.DataKeys(e.NewEditIndex).Value
             End If
         Next
+        ViewState("currentEditPK") = currentEditPK
         Dim rowData As DataRow = TableCrud.GetRowData(TABLA, pkColumns, currentEditPK)
         If rowData IsNot Nothing Then
             lblEditError.Text = ""
@@ -104,13 +121,26 @@ Public Class Paises
 
     ' Elimina el registro seleccionado
     Protected Sub gv_RowDeleting(sender As Object, e As GridViewDeleteEventArgs)
-        Dim err As String = TableCrud.Eliminar(e, TABLA, pkColumns)
+        Dim info As String = "Keys:"
+        For Each k As String In e.Keys
+            info &= " " & k & "=" & e.Keys(k)
+        Next
+        info &= " | ColInfo: " & columnInfo.Count & " cols"
+        Dim hasEstado As Boolean = columnInfo.Any(Function(c) c.ColumnName.ToUpper() = "ESTADO")
+        info &= " | hasEstado=" & hasEstado
+        info &= " | pkCols: " & String.Join(",", pkColumns)
+        Dim script As String = "alert('" & info.Replace("'", "\'") & "');"
+        ClientScript.RegisterStartupScript(Me.GetType(), "msg", script, True)
+
+        Dim err As String = TableCrud.Eliminar(e, TABLA, pkColumns, columnInfo)
         If String.IsNullOrEmpty(err) Then
             lblMsg.Text = "Registro eliminado."
             CargarDatos(search)
         Else
             lblMsg.Text = "Error: " & err
         End If
+        Dim script2 As String = "alert('" & lblMsg.Text.Replace("'", "\'") & "');"
+        ClientScript.RegisterStartupScript(Me.GetType(), "msg2", script2, True)
     End Sub
 
     ' Cancela la edicion inline y restaura el grid
