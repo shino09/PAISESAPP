@@ -73,7 +73,6 @@ Public Class DatabaseHelper
     Public Shared Function GetTableColumns(tableName As String) As List(Of ColumnInfo)
         Dim sql As String = "SELECT column_name, data_type, data_length, nullable, " & _
                             "identity_column, virtual_column " & _
-                            "FROM all_tab_cols WHERE table_name = :p_table " & _
                             "ORDER BY column_id"
         Dim p As New Dictionary(Of String, Object)()
         p.Add("p_table", tableName)

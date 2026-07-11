@@ -88,7 +88,7 @@ Public Class Monedas
     End Sub
 
     ' Abre el modal de edicion con los datos de la fila seleccionada
-    Protected Sub gv_RowEditing(sender As Object, e As GridViewEditEventArgs)
+    Protected Sub gv_RowEditing(sender As Object, e As GridViewEditEventArgs) Handles gv.RowEditing
         e.Cancel = True
         currentEditPK = New Dictionary(Of String, Object)()
         For Each pk In pkColumns
@@ -108,7 +108,7 @@ Public Class Monedas
     End Sub
 
     ' Actualiza el registro usando edicion inline del GridView
-    Protected Sub gv_RowUpdating(sender As Object, e As GridViewUpdateEventArgs)
+    Protected Sub gv_RowUpdating(sender As Object, e As GridViewUpdateEventArgs) Handles gv.RowUpdating
         Dim err As String = TableCrud.Actualizar(gv, e, TABLA, columnInfo, pkColumns)
         If String.IsNullOrEmpty(err) Then
             gv.EditIndex = -1
@@ -120,7 +120,7 @@ Public Class Monedas
     End Sub
 
     ' Elimina el registro seleccionado
-    Protected Sub gv_RowDeleting(sender As Object, e As GridViewDeleteEventArgs)
+    Protected Sub gv_RowDeleting(sender As Object, e As GridViewDeleteEventArgs) Handles gv.RowDeleting
         Dim err As String = TableCrud.Eliminar(e, TABLA, pkColumns, columnInfo)
         If String.IsNullOrEmpty(err) Then
             lblMsg.Text = "Registro eliminado."
@@ -128,30 +128,28 @@ Public Class Monedas
         Else
             lblMsg.Text = "Error: " & err
         End If
-        Dim script As String = "alert('" & lblMsg.Text.Replace("'", "\'") & "');"
-        ClientScript.RegisterStartupScript(Me.GetType(), "msg", script, True)
     End Sub
 
     ' Cancela la edicion inline y restaura el grid
-    Protected Sub gv_RowCancelingEdit(sender As Object, e As GridViewCancelEditEventArgs)
+    Protected Sub gv_RowCancelingEdit(sender As Object, e As GridViewCancelEditEventArgs) Handles gv.RowCancelingEdit
         gv.EditIndex = -1
         CargarDatos(search)
     End Sub
 
     ' Aplica formato a botones y celdas en cada fila del grid
-    Protected Sub gv_RowDataBound(sender As Object, e As GridViewRowEventArgs)
+    Protected Sub gv_RowDataBound(sender As Object, e As GridViewRowEventArgs) Handles gv.RowDataBound
         TableCrud.FormatearFilaEdicion(gv, e, columnInfo)
     End Sub
 
     ' Maneja el cambio de pagina del GridView
-    Protected Sub gv_PageIndexChanging(sender As Object, e As GridViewPageEventArgs)
+    Protected Sub gv_PageIndexChanging(sender As Object, e As GridViewPageEventArgs) Handles gv.PageIndexChanging
         gv.EditIndex = -1
         gv.PageIndex = e.NewPageIndex
         CargarDatos(search)
     End Sub
 
     ' Ordena los datos por la columna seleccionada
-    Protected Sub gv_Sorting(sender As Object, e As GridViewSortEventArgs)
+    Protected Sub gv_Sorting(sender As Object, e As GridViewSortEventArgs) Handles gv.Sorting
         Dim col As String = e.SortExpression
         Dim dir As String = "ASC"
         If ViewState("sortCol") IsNot Nothing AndAlso ViewState("sortCol").ToString() = col Then

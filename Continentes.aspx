@@ -39,10 +39,6 @@
     <div class="grid-container">
         <asp:GridView ID="gv" runat="server" CssClass="gridview" AutoGenerateColumns="False"
             AllowPaging="True" PageSize="10" AllowSorting="True"
-            OnRowEditing="gv_RowEditing" OnRowUpdating="gv_RowUpdating"
-            OnRowDeleting="gv_RowDeleting" OnRowCancelingEdit="gv_RowCancelingEdit"
-            OnRowDataBound="gv_RowDataBound" OnPageIndexChanging="gv_PageIndexChanging"
-            OnSorting="gv_Sorting"
             EmptyDataText="No se encontraron registros."
             CellPadding="8" CellSpacing="0" BorderWidth="0" GridLines="Both"
             HeaderStyle-CssClass="grid-header" AlternatingRowStyle-CssClass="grid-alt">

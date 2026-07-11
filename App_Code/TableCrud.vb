@@ -18,9 +18,9 @@ Public Class TableCrud
         Dim sql As New StringBuilder()
         sql.Append("SELECT * FROM " & tableName)
 
-        If hasEstado Then
-            sql.Append(" WHERE (estado IS NULL OR estado = 'V')")
-        End If
+        'If hasEstado Then
+        '    sql.Append(" WHERE (estado IS NULL OR estado = 'V')")
+        'End If
 
         If Not String.IsNullOrEmpty(search) Then
             Dim textCols = columnInfo.Where(Function(c) c.DataType.ToUpper().Contains("CHAR") OrElse _
@@ -373,7 +373,6 @@ Public Class TableCrud
                             ElseIf btn.CommandName = "Delete" Then
                                 btn.Attributes("class") = "btn btn-delete-grid"
                                 btn.Text = ChrW(&H2716) & " Eliminar"
-                                btn.OnClientClick = "return confirm('" & MensajeConfirmacionEliminar() & "');"
                             ElseIf btn.CommandName = "Update" Then
                                 btn.Attributes("class") = "btn btn-save"
                                 btn.Text = "Guardar"
